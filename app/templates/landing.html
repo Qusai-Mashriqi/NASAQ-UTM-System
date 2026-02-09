@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="text-center d-flex flex-column justify-content-center align-items-center" style="min-height: 80vh;">
+    
+    <div class="glass-card p-5 animate-fade-in" style="max-width: 800px;">
+        <h1 class="nasaq-logo" style="font-size: 5rem;">NASAQ</h1>
+        <h3 class="brand-font mb-4" style="color: var(--neon-blue); letter-spacing: 3px;">
+            The Future of Organized Airspace
+        </h3>
+        
+        <p class="lead mb-5 adaptive-text">
+            Advanced UTM system for managing drone traffic, ensuring safety, and integrating UAVs into Jordan's national airspace.
+        </p>
+        
+        <div class="d-flex gap-3 justify-content-center">
+            <a href="{{ url_for('auth.login') }}" class="btn btn-nasaq px-5">
+                <i class="fas fa-sign-in-alt me-2"></i> System Login
+            </a>
+            
+            <a href="{{ url_for('auth.register_selection') }}" class="btn btn-nasaq px-5" style="border-color: var(--text-main); color: var(--text-main);">
+                <i class="fas fa-user-plus me-2"></i> Join Network
+            </a>
+        </div>
+    </div>
+
+    <div class="row mt-5 w-100">
+        <div class="col-md-4">
+            <div class="glass-card h-100 role-card">
+                <i class="fas fa-map-marked-alt fa-2x mb-3" style="color: var(--neon-blue);"></i>
+                <h5 class="brand-font adaptive-title">Smart Geofencing</h5>
+                <p class="small adaptive-text">Real-time restricted zone enforcement.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="glass-card h-100 role-card">
+                <i class="fas fa-satellite fa-2x mb-3 text-warning"></i>
+                <h5 class="brand-font adaptive-title">Live Tracking</h5>
+                <p class="small adaptive-text">Monitor active flights in real-time.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="glass-card h-100 role-card">
+                <i class="fas fa-file-signature fa-2x mb-3" style="color: var(--neon-green);"></i>
+                <h5 class="brand-font adaptive-title">Instant Approval</h5>
+                <p class="small adaptive-text">Automated flight clearance system.</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    /* الوضع الطبيعي (فاتح) */
+    .adaptive-text {
+        color: #495057; /* رمادي غامق */
+        font-weight: 500;
+    }
+    .adaptive-title {
+        color: #000;
+    }
+
+    /* وضع الدارك مود (يجبر النصوص تصير بيضاء) */
+    [data-theme="dark"] .adaptive-text {
+        color: #e9ecef !important; /* أبيض فضي فاتح */
+        text-shadow: 0 1px 2px rgba(0,0,0,0.6); /* ظل خفيف */
+    }
+    
+    [data-theme="dark"] .adaptive-title {
+        color: #fff !important;
+    }
+
+    /* تحسين شكل الزر الثاني في الدارك مود */
+    [data-theme="dark"] .btn-outline-custom {
+        color: #fff !important;
+        border-color: #fff !important;
+    }
+</style>
+{% endblock %}

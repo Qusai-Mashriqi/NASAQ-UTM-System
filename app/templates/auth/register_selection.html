@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center text-center" style="min-height: 80vh;">
+    <div class="col-md-9">
+        
+        <div class="nasaq-brand-container">
+            <h1 class="nasaq-logo">NASAQ</h1>
+            <span class="nasaq-slogan">Select Entity Type</span>
+        </div>
+
+        <div class="row justify-content-center">
+            <div class="col-md-5 mb-4">
+                <div class="glass-card role-card h-100">
+                    <div class="mb-3">
+                        <i class="fas fa-drone fa-4x" style="color: var(--neon-blue);"></i>
+                    </div>
+                    <h3 class="brand-font">UAV Operator</h3>
+                    <p class="text-muted small">
+                        For licensed pilots, commercial entities, and hobbyists registering drones.
+                    </p>
+                    <a href="{{ url_for('auth.register', role='operator') }}" class="btn btn-nasaq">
+                        Register Entity
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-md-5 mb-4">
+                <div class="glass-card role-card h-100">
+                    <div class="mb-3">
+                        <i class="fas fa-tower-observation fa-4x text-warning"></i>
+                    </div>
+                    <h3 class="brand-font">Airspace Controller</h3>
+                    <p class="text-muted small">
+                        Restricted access for CARC officials and security agencies.
+                    </p>
+                    <a href="{{ url_for('auth.register', role='controller') }}" class="btn btn-nasaq" style="border-color: #ffc107; color: #ffc107;">
+                        Official Access
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <a href="{{ url_for('auth.login') }}" class="text-muted">Back to Login Portal</a>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

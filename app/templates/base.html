@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NASAQ | UTM System</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-nasaq">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('main.index') }}" style="font-family: sans-serif; font-weight: 900; font-size: 1.8rem; letter-spacing: -2px;">
+                <i class="fas fa-satellite-dish" style="font-size: 1.5rem; margin-right: 5px; color: #0096C7;"></i>
+                <span style="color: #0096C7;">NASA</span><span style="color: #90E0EF;">Q</span>
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    
+                    <li class="nav-item me-3">
+                        <button class="btn btn-link nav-link" id="theme-toggle" style="font-size: 1.2rem; cursor: pointer;">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                    </li>
+
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item">
+                            {% if current_user.role == 'operator' %}
+                                <a class="nav-link" href="{{ url_for('pilot.dashboard') }}">Dashboard</a>
+                            {% else %}
+                                <a class="nav-link" href="{{ url_for('admin.dashboard') }}">Dashboard</a>
+                            {% endif %}
+                        </li>
+                        <li class="nav-item">
+                            <span class="nav-link text-warning">{{ current_user.full_name }} ({{ current_user.role|upper }})</span>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link btn btn-outline-danger btn-sm ms-2" href="{{ url_for('auth.logout') }}">Logout</a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('auth.register_selection') }}">Register</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show glass-card mb-4" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // تعريف العناصر
+        const toggleBtn = document.getElementById('theme-toggle');
+        const icon = toggleBtn.querySelector('i');
+        const html = document.documentElement;
+        
+        // روابط الخرائط
+        const darkMapTile = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+        const lightMapTile = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+
+        // استرجاع الثيم المحفوظ
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        applyTheme(savedTheme);
+
+        function applyTheme(theme) {
+            html.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            
+            // تغيير الأيقونة
+            if (theme === 'light') {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+                icon.style.color = 'orange';
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+                icon.style.color = '';
+            }
+
+            // تحديث الخريطة
+            updateMapTile(theme);
+        }
+
+        function updateMapTile(theme) {
+            // التحقق من وجود خريطة في الصفحة الحالية
+            if (typeof map !== 'undefined' && map.hasLayer) {
+                map.eachLayer(function (layer) {
+                    if (layer instanceof L.TileLayer) {
+                        map.removeLayer(layer);
+                    }
+                });
+
+                const newTile = theme === 'light' ? lightMapTile : darkMapTile;
+                L.tileLayer(newTile, {
+                    attribution: '&copy; OpenStreetMap &copy; CARTO',
+                    maxZoom: 20
+                }).addTo(map);
+            }
+        }
+
+        toggleBtn.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            applyTheme(newTheme);
+        });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

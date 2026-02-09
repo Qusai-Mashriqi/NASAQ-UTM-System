@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="brand-font text-warning"><i class="fas fa-tower-broadcast"></i> Flight Control Board</h2>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-light btn-sm">
+        <i class="fas fa-arrow-left"></i> Back to Map
+    </a>
+</div>
+
+<div class="glass-card">
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0" style="background: transparent;">
+            <thead>
+                <tr style="border-color: var(--neon-blue);">
+                    <th>ID</th>
+                    <th>Pilot / Drone</th>
+                    <th>Schedule</th>
+                    <th>Altitude</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for flight in flights %}
+                <tr>
+                    <td><span class="text-muted">#{{ flight.id }}</span></td>
+                    <td>
+                        <div class="fw-bold text-white">{{ flight.pilot.full_name }}</div>
+                        <small class="text-muted">{{ flight.drone.name }}</small>
+                    </td>
+                    <td>
+                        <div class="small">
+                            <span class="text-info">Start:</span> {{ flight.start_time.strftime('%Y-%m-%d %H:%M') }}<br>
+                            <span class="text-warning">End:</span> {{ flight.end_time.strftime('%H:%M') }}
+                        </div>
+                    </td>
+                    <td>{{ flight.max_altitude }}m</td>
+                    <td>
+                        {% if flight.status == 'pending' %}
+                            <span class="badge bg-warning text-dark">PENDING</span>
+                        {% elif flight.status == 'approved' %}
+                            <span class="badge bg-success mb-1">APPROVED</span><br>
+                            <a href="{{ url_for('admin.monitor_flight', flight_id=flight.id) }}" class="btn btn-outline-warning btn-sm" style="font-size: 0.7rem;">
+                                <i class="fas fa-satellite-dish"></i> Monitor Live
+                            </a>
+                        {% else %}
+                            <span class="badge bg-danger">REJECTED</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-outline-info btn-sm me-2" 
+                                onclick="prepareAndShowPath(this)" 
+                                data-id="{{ flight.id }}" 
+                                data-path='{{ flight.path_data | safe }}'>
+                            <i class="fas fa-map-marked-alt"></i> View Path
+                        </button>
+
+                        {% if flight.status == 'pending' %}
+                            <a href="{{ url_for('admin.process_flight', flight_id=flight.id, action='approve') }}" class="btn btn-success btn-sm" title="Approve">
+                                <i class="fas fa-check"></i>
+                            </a>
+                            <a href="{{ url_for('admin.process_flight', flight_id=flight.id, action='reject') }}" class="btn btn-danger btn-sm" title="Reject">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No flight requests yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="pathModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content glass-card" style="border: 1px solid var(--neon-blue);">
+            <div class="modal-header border-0">
+                <h5 class="modal-title brand-font text-white">Flight Path Review</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="mini-map" style="height: 400px; width: 100%;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // إعداد خريطة المودال
+    var miniMap = L.map('mini-map').setView([31.95, 35.91], 11);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }).addTo(miniMap);
+    
+    var flightLayer = L.featureGroup().addTo(miniMap);
+    var zonesLayer = L.featureGroup().addTo(miniMap);
+
+    // تحميل المناطق المحظورة مرة واحدة
+    fetch('/admin/get_zones')
+    .then(res => res.json())
+    .then(data => {
+        data.forEach(zone => {
+            var color = zone.type === 'red' ? '#ff2a6d' : (zone.type === 'yellow' ? '#ffc107' : '#00f0b5');
+            // التأكد من وجود البيانات لتجنب الأخطاء
+            if(zone.coords && zone.coords.length > 0) {
+                try {
+                    L.polygon(zone.coords, {color: color, fillOpacity: 0.2, weight: 1}).addTo(zonesLayer);
+                } catch(e) { console.log("Error loading zone shape"); }
+            }
+        });
+    });
+
+    // دالة جديدة لقراءة البيانات من الزر بشكل آمن
+    function prepareAndShowPath(button) {
+        var id = button.getAttribute('data-id');
+        var pathString = button.getAttribute('data-path');
+        
+        try {
+            // تحويل النص المخزن في الزر إلى مصفوفة جافاسكريبت حقيقية
+            var pathData = JSON.parse(pathString);
+            
+            // استدعاء دالة الرسم
+            drawPathOnMap(pathData);
+            
+        } catch(e) {
+            console.error("Error parsing path data:", e);
+            alert("Error loading flight path data. Check console.");
+        }
+    }
+
+    // دالة الرسم المنفصلة
+    function drawPathOnMap(pathData) {
+        // تنظيف الخريطة من أي رسم سابق
+        flightLayer.clearLayers();
+        
+        if (pathData && pathData.length > 0) {
+            var polyline = L.polyline(pathData, {color: '#00d4ff', weight: 4}).addTo(flightLayer);
+            
+            // إضافة علامات البداية والنهاية
+            L.circleMarker(pathData[0], {color: 'green', radius: 6}).addTo(flightLayer).bindPopup("Start");
+            L.circleMarker(pathData[pathData.length - 1], {color: 'red', radius: 6}).addTo(flightLayer).bindPopup("End");
+
+            // فتح المودال
+            var modal = new bootstrap.Modal(document.getElementById('pathModal'));
+            modal.show();
+            
+            // إصلاح مشكلة تحميل الخريطة داخل المودال (ضروري جداً)
+            setTimeout(() => {
+                miniMap.invalidateSize();
+                miniMap.fitBounds(polyline.getBounds());
+            }, 500);
+        } else {
+            alert("No valid coordinates found for this path.");
+        }
+    }
+</script>
+{% endblock %}

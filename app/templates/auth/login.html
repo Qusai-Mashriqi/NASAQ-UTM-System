@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="col-md-5">
+        
+        <div class="nasaq-brand-container">
+            <h1 class="nasaq-logo">NASAQ</h1>
+            <span class="nasaq-slogan">The Future of Organized Airspace</span>
+        </div>
+
+        <div class="glass-card">
+            <h4 class="text-center mb-4 brand-font" style="color: white;">System Login</h4>
+            
+            <form method="POST" action="">
+                <div class="mb-3">
+                    <input type="email" name="email" class="form-control" placeholder="Email Address" required>
+                </div>
+                <div class="mb-4">
+                    <input type="password" name="password" class="form-control" placeholder="Password" required>
+                </div>
+                
+                <button type="submit" class="btn btn-nasaq">Access System</button>
+            </form>
+
+            <div class="text-center mt-4">
+                <span class="text-muted">Don't have an account?</span><br>
+                <a href="{{ url_for('auth.register_selection') }}" style="color: var(--neon-blue); text-decoration: none;">Create New Account</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

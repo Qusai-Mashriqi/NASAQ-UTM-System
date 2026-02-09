@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="glass-card">
+            <h4 class="brand-font text-center mb-4" style="color: var(--neon-blue);">
+                <i class="fas fa-microchip"></i> Register New UAV
+            </h4>
+            
+            <form method="POST" action="">
+                <div class="mb-3">
+                    <label class="text-muted small">Drone Model / Name</label>
+                    <input type="text" name="name" class="form-control" placeholder="DJI Mavic 3, Matrice 300..." required>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="text-muted small">Serial Number (Unique ID)</label>
+                    <input type="text" name="serial_number" class="form-control" placeholder="S/N: 1581F4..." required>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Weight (kg)</label>
+                        <input type="number" step="0.1" name="weight" class="form-control" placeholder="0.9" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Usage Type</label>
+                        <select name="usage_type" class="form-control bg-dark text-white">
+                            <option value="Photography">Aerial Photography</option>
+                            <option value="Surveying">Surveying / Mapping</option>
+                            <option value="Delivery">Cargo / Delivery</option>
+                            <option value="Hobby">Recreational (Hobby)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-nasaq">Register Drone</button>
+                    <a href="{{ url_for('pilot.dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

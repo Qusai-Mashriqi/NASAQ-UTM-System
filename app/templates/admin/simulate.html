@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="glass-card h-100 text-center">
+            <h4 class="brand-font text-warning mb-4">
+                <i class="fas fa-tower-observation"></i> Surveillance
+            </h4>
+            
+            <div class="mb-4">
+                <div id="radar-anim">
+                    <i class="fas fa-radar fa-3x mb-2" style="color: var(--neon-blue);"></i>
+                </div>
+                <h5 class="mt-2 text-white">Live Monitoring</h5>
+                <span class="badge bg-info animate-blink">TRACKING ACTIVE</span>
+            </div>
+
+            <hr>
+            
+            <div class="text-start px-3">
+                <p class="mb-1 text-muted small">Pilot Name:</p>
+                <p class="fw-bold text-white">{{ flight.pilot.full_name }}</p>
+
+                <p class="mb-1 text-muted small">Drone Model:</p>
+                <p class="fw-bold text-white">{{ flight.drone.name }}</p>
+                
+                <div class="row mt-3">
+                    <div class="col-6">
+                        <p class="mb-1 text-muted small">Altitude:</p>
+                        <p class="fw-bold text-warning" id="alt-display">0.0 m</p>
+                    </div>
+                    <div class="col-6">
+                        <p class="mb-1 text-muted small">Speed:</p>
+                        <p class="fw-bold text-info" id="speed-display">0.0 km/h</p>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <p class="mb-1 text-muted small">Flight Timer:</p>
+                    <p class="fw-bold" style="font-family: monospace; font-size: 1.2rem;" id="timer-display">00:00</p>
+                </div>
+            </div>
+
+            <hr>
+            <a href="{{ url_for('admin.manage_flights') }}" class="btn btn-outline-light w-100">
+                <i class="fas fa-arrow-left"></i> Back to Control Board
+            </a>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <div class="glass-card p-0" style="height: 600px; position: relative;">
+            <div id="map" style="width: 100%; height: 100%;"></div>
+            
+            <div class="progress" style="height: 5px; position: absolute; bottom: 0; width: 100%; z-index: 999;">
+                <div id="flight-progress" class="progress-bar bg-warning" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .animate-blink { animation: blink 1.5s infinite; }
+    @keyframes blink { 50% { opacity: 0.3; } }
+    .drone-marker { transition: all 0.1s linear; }
+    .drone-svg { filter: drop-shadow(0px 0px 5px #ffc107); }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    var map = L.map('map').setView([31.95, 35.91], 13);
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var tileUrl = isDark ? 
+        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 
+        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+    L.tileLayer(tileUrl, { maxZoom: 20 }).addTo(map);
+
+    // 1. جلب المناطق (باستخدام رابط الأدمن)
+    fetch('/admin/get_zones')
+    .then(res => res.json())
+    .then(data => {
+        data.forEach(zone => {
+            var color = zone.type === 'red' ? '#ff2a6d' : (zone.type === 'yellow' ? '#ffc107' : '#00f0b5');
+            var coords = zone.coords;
+            if (typeof coords === 'string') { try { coords = JSON.parse(coords); } catch(e) {} }
+
+            try {
+                if (coords.type === 'circle' || (coords.lat && coords.radius)) {
+                    L.circle([coords.lat, coords.lng], { radius: coords.radius, color: color, fillOpacity: 0.2 }).addTo(map);
+                } else {
+                    L.polygon(coords, { color: color, fillOpacity: 0.2 }).addTo(map);
+                }
+            } catch(e) {}
+        });
+    });
+
+    // 2. المحاكاة
+    var rawPathData = '{{ flight.path_data | safe }}';
+    var maxAllowedAlt = Number("{{ flight.max_altitude }}"); 
+    var simulationDuration = 15000; 
+    var animationFrameId;
+    var startTime = null;
+
+    try {
+        var pathData = JSON.parse(rawPathData);
+        if (pathData && pathData.length > 0) {
+            
+            var polyline = L.polyline(pathData, {color: 'rgba(255, 193, 7, 0.5)', weight: 3, dashArray: '5, 10'}).addTo(map);
+            map.fitBounds(polyline.getBounds(), {padding: [80, 80]});
+
+            // أيقونة صفراء للأدمن
+            var droneIconHtml = `<svg class="drone-svg" viewBox="0 0 512 512" width="40" height="40" fill="#ffc107" xmlns="http://www.w3.org/2000/svg"><path d="M448 64c-17.7 0-32 14.3-32 32v32h-48V80c0-26.5-21.5-48-48-48s-48 21.5-48 48v48H240V80c0-26.5-21.5-48-48-48s-48 21.5-48 48v48H96V96c0-17.7-14.3-32-32-32S32 78.3 32 96v32c0 17.7 14.3 32 32 32h48v48c-26.5 0-48 21.5-48 48s21.5 48 48 48v48H64c-17.7 0-32 14.3-32 32s14.3 32 32 32v32c0 17.7 14.3 32 32 32s32-14.3 32-32v-32h48v48c0 26.5 21.5 48 48 48s48-21.5 48-48v-48h48v48c0 26.5 21.5 48 48 48s48-21.5 48-48v-48h48v32c0 17.7 14.3 32 32 32s32-14.3 32-32v-32c0-17.7-14.3-32-32-32h-48v-48c26.5 0 48-21.5 48-48s-21.5-48-48-48v-48h48v32c0 17.7 14.3 32 32 32s32-14.3 32-32V96c0-17.7-14.3-32-32-32zM192 192a64 64 0 1 1 128 0 64 64 0 1 1 -128 0z"/></svg>`;
+            var droneIcon = L.divIcon({ className: 'drone-marker', html: droneIconHtml, iconSize: [40, 40], iconAnchor: [20, 20] });
+            var marker = L.marker(pathData[0], {icon: droneIcon}).addTo(map);
+
+            var totalDistance = 0;
+            for(let i=0; i<pathData.length-1; i++) totalDistance += map.distance(pathData[i], pathData[i+1]);
+
+            function getPointAtPercent(percent) {
+                var targetDist = totalDistance * percent;
+                var currentDist = 0;
+                for(let i=0; i<pathData.length-1; i++) {
+                    var segmentDist = map.distance(pathData[i], pathData[i+1]);
+                    if (currentDist + segmentDist >= targetDist) {
+                        var segmentPercent = (targetDist - currentDist) / segmentDist;
+                        var lat = pathData[i].lat + (pathData[i+1].lat - pathData[i].lat) * segmentPercent;
+                        var lng = pathData[i].lng + (pathData[i+1].lng - pathData[i].lng) * segmentPercent;
+                        return [lat, lng];
+                    }
+                    currentDist += segmentDist;
+                }
+                return pathData[pathData.length - 1];
+            }
+
+            function animate(timestamp) {
+                if (!startTime) startTime = timestamp;
+                var elapsed = timestamp - startTime;
+                var progress = elapsed / simulationDuration;
+
+                if (progress < 1) {
+                    var newLatLng = getPointAtPercent(progress);
+                    marker.setLatLng(newLatLng);
+                    
+                    document.getElementById('flight-progress').style.width = (progress * 100) + '%';
+                    document.getElementById('timer-display').innerText = "00:" + String(Math.floor(elapsed / 1000)).padStart(2, '0');
+                    
+                    var simulatedAlt = (maxAllowedAlt * 0.8) + (Math.sin(elapsed / 1000) * 5);
+                    if(simulatedAlt > maxAllowedAlt) simulatedAlt = maxAllowedAlt;
+                    document.getElementById('alt-display').innerText = simulatedAlt.toFixed(1) + ' m';
+
+                    var simulatedSpeed = 25 + (Math.random() * 5) - 2.5; 
+                    if(simulatedSpeed > 30) simulatedSpeed = 30.0;
+                    document.getElementById('speed-display').innerText = simulatedSpeed.toFixed(1) + ' km/h';
+
+                    animationFrameId = requestAnimationFrame(animate);
+                } else {
+                    marker.setLatLng(pathData[pathData.length - 1]);
+                    document.getElementById('flight-progress').style.width = '100%';
+                    document.getElementById('timer-display').innerText = "Finished";
+                    document.getElementById('speed-display').innerText = "0.0 km/h";
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+    } catch(e) {}
+</script>
+{% endblock %}

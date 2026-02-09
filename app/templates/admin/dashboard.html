@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="glass-card h-100">
+            <h5 class="brand-font text-warning mb-3">
+                <i class="fas fa-shield-alt"></i> Airspace Control
+            </h5>
+            
+            <div class="d-grid gap-2 mb-3">
+                <button onclick="location.reload()" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-sync"></i> Refresh Data
+                </button>
+                
+                <a href="{{ url_for('admin.manage_users') }}" class="btn btn-outline-info btn-sm">
+                    <i class="fas fa-users-cog"></i> Manage Staff & Users
+                </a>
+
+                <a href="{{ url_for('admin.manage_flights') }}" class="btn btn-outline-warning btn-sm mt-2">
+                    <i class="fas fa-plane-arrival"></i> Flight Control Board
+                </a>
+            </div>
+
+            <hr>
+            <small class="text-muted">Active Zones:</small>
+            <div id="zones-list" class="mt-2" style="max-height: 400px; overflow-y: auto;">
+                </div>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <div class="glass-card p-0" style="height: 650px; position: relative;">
+            <div id="map" style="width: 100%; height: 100%; border-radius: 15px;"></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="zoneModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card" style="border: 1px solid var(--neon-blue);">
+            <div class="modal-header border-0">
+                <h5 class="modal-title brand-font text-white">Define Airspace Zone</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="zoneForm">
+                    <div class="mb-3">
+                        <label class="text-muted small">Zone Name</label>
+                        <input type="text" id="zoneName" class="form-control" placeholder="Ex: Military Base Area 51" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small">Risk Level / Color</label>
+                        <select id="zoneColor" class="form-control bg-dark text-white">
+                            <option value="red">🔴 NO-FLY ZONE (Prohibited)</option>
+                            <option value="yellow">🟡 RESTRICTED ZONE (Warning)</option>
+                            <option value="green">🟢 SAFE ZONE (Authorized)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-muted small">Description (Optional)</label>
+                        <textarea id="zoneDesc" class="form-control" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-nasaq" id="saveZoneBtn">Save Zone</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+<script>
+    // 1. إعداد الخريطة
+    var map = L.map('map').setView([31.95, 35.91], 11);
+    
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var tileUrl = isDark ? 
+        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 
+        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+    L.tileLayer(tileUrl, { maxZoom: 20 }).addTo(map);
+
+    // 2. أدوات الرسم
+    var drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    var drawControl = new L.Control.Draw({
+        edit: { featureGroup: drawnItems },
+        draw: {
+            polygon: true, rectangle: true, circle: true,
+            marker: false, polyline: false, circlemarker: false
+        }
+    });
+    map.addControl(drawControl);
+
+    var currentLayer = null; 
+
+    // 3. عند الانتهاء من الرسم
+    map.on(L.Draw.Event.CREATED, function (e) {
+        currentLayer = e.layer;
+        var modal = new bootstrap.Modal(document.getElementById('zoneModal'));
+        modal.show();
+    });
+
+    // 4. الحفظ
+    document.getElementById('saveZoneBtn').addEventListener('click', function() {
+        if(!currentLayer) return;
+
+        var name = document.getElementById('zoneName').value;
+        var colorType = document.getElementById('zoneColor').value;
+        
+        if(!name) { alert("Please enter a name"); return; }
+
+        // تجهيز الإحداثيات (هنا التعديل المهم)
+        var coords;
+        if (currentLayer instanceof L.Circle) {
+            // الدائرة: نحفظ المركز ونصف القطر ككائن بسيط
+            coords = { 
+                type: 'circle',
+                lat: currentLayer.getLatLng().lat, 
+                lng: currentLayer.getLatLng().lng, 
+                radius: currentLayer.getRadius() 
+            };
+        } else {
+            // المضلع/المربع: نحفظ مصفوفة النقاط
+            coords = currentLayer.getLatLngs();
+        }
+
+        fetch('/admin/add_zone', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: name,
+                type: colorType,
+                coords: coords
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            var modalEl = document.getElementById('zoneModal');
+            var modal = bootstrap.Modal.getInstance(modalEl);
+            modal.hide();
+            document.getElementById('zoneForm').reset();
+            location.reload(); 
+        });
+    });
+
+    // 5. استرجاع وعرض المناطق
+    fetch('/admin/get_zones')
+    .then(res => res.json())
+    .then(data => {
+        data.forEach(zone => {
+            var color = zone.type === 'red' ? '#ff2a6d' : (zone.type === 'yellow' ? '#ffc107' : '#00f0b5');
+            var coords = zone.coords;
+            
+            // تصحيح JSON لو وصل كنص
+            if (typeof coords === 'string') {
+                try { coords = JSON.parse(coords); } catch(e) {}
+            }
+
+            try {
+                // هل هي دائرة محفوظة بالكود الجديد؟
+                if (coords.type === 'circle' || coords.radius) {
+                    L.circle([coords.lat, coords.lng], {
+                        radius: coords.radius,
+                        color: color,
+                        fillOpacity: 0.4
+                    }).addTo(map).bindPopup(`<b>${zone.name}</b>`);
+                } 
+                // هل هي مضلع؟
+                else {
+                    L.polygon(coords, {
+                        color: color, 
+                        fillOpacity: 0.4
+                    }).addTo(map).bindPopup(`<b>${zone.name}</b>`);
+                }
+
+                // إضافة للقائمة الجانبية
+                document.getElementById('zones-list').innerHTML += `
+                    <div class="p-2 mb-2 border rounded" style="border-color: ${color} !important; border-left-width: 5px !important;">
+                        <strong>${zone.name}</strong> <br>
+                        <small style="color:${color}">${zone.type.toUpperCase()}</small>
+                    </div>`;
+
+            } catch(e) { console.log("Error displaying zone", e); }
+        });
+    });
+</script>
+{% endblock %}
