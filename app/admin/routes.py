@@ -6,24 +6,25 @@ import json
 
 admin = Blueprint('admin', __name__, url_prefix='/admin')
 
-# 1. صفحة الداشبورد
 @admin.route('/dashboard')
 @login_required
 def dashboard():
+    """Admin/Controller main dashboard view."""
     if current_user.role != 'controller':
-        flash('Restricted Area!', 'danger')
+        flash('Restricted Area! Authorized Personnel Only.', 'danger')
         return redirect(url_for('pilot.dashboard'))
     return render_template('admin/dashboard.html')
 
-# 2. (API) حفظ منطقة جديدة
+# --- Zone Management APIs ---
+
 @admin.route('/add_zone', methods=['POST'])
 @login_required
 def add_zone():
+    """API to create a new Geofencing zone."""
     data = request.get_json()
     
     name = data.get('name')
     zone_type = data.get('type') 
-    # تحويل الإحداثيات لنص JSON لحفظها في قاعدة البيانات
     coords = json.dumps(data.get('coords')) 
     
     new_zone = Zone(name=name, zone_type=zone_type, geometry_data=coords)
@@ -32,17 +33,16 @@ def add_zone():
     
     return jsonify({'message': 'Zone added successfully!', 'id': new_zone.id})
 
-# 3. (API) جلب المناطق
 @admin.route('/get_zones')
 @login_required
 def get_zones():
+    """API to fetch all active zones."""
     zones = Zone.query.all()
     zones_list = []
     for z in zones:
-        # محاولة فك تشفير البيانات بأمان
         try:
             coords_data = json.loads(z.geometry_data)
-        except:
+        except json.JSONDecodeError:
             coords_data = []
 
         zones_list.append({
@@ -53,14 +53,12 @@ def get_zones():
         })
     return jsonify(zones_list)
 
-# ==========================================
-#  نظام إدارة المستخدمين
-# ==========================================
+# --- User Management ---
 
-# 4. صفحة عرض قائمة المستخدمين
 @admin.route('/users')
 @login_required
 def manage_users():
+    """View to manage registered users."""
     if current_user.role != 'controller':
         flash('Unauthorized Access!', 'danger')
         return redirect(url_for('pilot.dashboard'))
@@ -68,10 +66,10 @@ def manage_users():
     users = User.query.filter(User.id != current_user.id).all()
     return render_template('admin/users.html', users=users)
 
-# 5. تنفيذ الموافقة أو الرفض
 @admin.route('/approve_user/<int:user_id>/<action>')
 @login_required
 def approve_user(user_id, action):
+    """Action to Approve or Reject a user account."""
     if current_user.role != 'controller':
         return redirect(url_for('pilot.dashboard'))
 
@@ -84,29 +82,25 @@ def approve_user(user_id, action):
         user.is_approved = False 
         flash(f'User {user.full_name} access REVOKED.', 'warning')
     
-    # (تم إصلاح هذا الجزء الناقص)
     db.session.commit()
     return redirect(url_for('admin.manage_users'))
 
-# ==========================================
-#  نظام إدارة الرحلات (Flight Control)
-# ==========================================
+# --- Flight Management ---
 
-# 6. صفحة إدارة الرحلات الجوية (برج المراقبة)
 @admin.route('/flights')
 @login_required
 def manage_flights():
+    """View to oversee flight requests."""
     if current_user.role != 'controller':
         return redirect(url_for('pilot.dashboard'))
         
-    # جلب الرحلات مرتبة الأحدث أولاً
     flights = FlightRequest.query.order_by(FlightRequest.created_at.desc()).all()
     return render_template('admin/flights.html', flights=flights)
 
-# 7. (API) الموافقة أو الرفض على الرحلة
 @admin.route('/process_flight/<int:flight_id>/<action>')
 @login_required
 def process_flight(flight_id, action):
+    """Action to Approve or Reject a flight plan."""
     if current_user.role != 'controller':
         return redirect(url_for('pilot.dashboard'))
         
@@ -122,17 +116,16 @@ def process_flight(flight_id, action):
     db.session.commit()
     return redirect(url_for('admin.manage_flights'))
 
-# 8. (جديد) صفحة مراقبة الرحلة (Admin Simulation View)
 @admin.route('/monitor_flight/<int:flight_id>')
 @login_required
 def monitor_flight(flight_id):
+    """Real-time flight simulation monitoring view."""
     if current_user.role != 'controller':
         flash('Unauthorized Access', 'danger')
         return redirect(url_for('admin.dashboard'))
         
     flight = FlightRequest.query.get_or_404(flight_id)
     
-    # الأدمن يراقب فقط الرحلات الموافق عليها
     if flight.status != 'approved':
         flash('Cannot monitor flight. Status is not Approved.', 'warning')
         return redirect(url_for('admin.manage_flights'))

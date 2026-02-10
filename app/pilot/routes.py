@@ -7,10 +7,10 @@ import json
 
 pilot = Blueprint('pilot', __name__, url_prefix='/pilot')
 
-# 1. صفحة الداشبورد
 @pilot.route('/dashboard')
 @login_required
 def dashboard():
+    """Pilot/Operator dashboard view."""
     if current_user.role != 'operator':
         flash('Unauthorized Access!', 'danger')
         return redirect(url_for('admin.dashboard'))
@@ -20,10 +20,10 @@ def dashboard():
     
     return render_template('pilot/dashboard.html', drones=my_drones, flights=my_flights)
 
-# 2. صفحة إضافة درون
 @pilot.route('/add_drone', methods=['GET', 'POST'])
 @login_required
 def add_drone():
+    """Form to register a new drone."""
     if request.method == 'POST':
         name = request.form.get('name')
         serial = request.form.get('serial_number')
@@ -42,10 +42,10 @@ def add_drone():
         
     return render_template('pilot/add_drone.html')
 
-# 3. صفحة طلب رحلة
 @pilot.route('/request_flight', methods=['GET', 'POST'])
 @login_required
 def request_flight():
+    """Form to submit a new flight plan."""
     drones = Drone.query.filter_by(owner=current_user).all()
     
     if request.method == 'POST':
@@ -74,23 +74,22 @@ def request_flight():
             flash('Flight Plan Submitted! Awaiting Approval.', 'success')
             return redirect(url_for('pilot.dashboard'))
         except Exception as e:
-            flash(f'Error submitting flight: {e}', 'danger')
+            flash(f'Error submitting flight: {str(e)}', 'danger')
 
     return render_template('pilot/request_flight.html', drones=drones)
 
-# 4. (المهم جداً) API جلب المناطق - تم إصلاحها
 @pilot.route('/get_operational_zones')
 @login_required
 def get_operational_zones():
+    """API to fetch zones for the pilot map."""
     try:
         zones = Zone.query.all()
         zones_list = []
         for z in zones:
-            # محاولة فك تشفير JSON بأمان لتجنب أي خطأ في السيرفر
             try:
                 coords_data = json.loads(z.geometry_data)
-            except:
-                coords_data = [] # في حال كانت البيانات تالفة
+            except json.JSONDecodeError:
+                coords_data = [] 
 
             zones_list.append({
                 'name': z.name, 
@@ -98,18 +97,15 @@ def get_operational_zones():
                 'coords': coords_data
             })
         
-        # هذا السطر هو الذي كان يسبب المشكلة إذا كان مفقوداً!
         return jsonify(zones_list)
         
     except Exception as e:
-        # في حال حدوث أي خطأ، نرجع قائمة فارغة بدلاً من تعليق السيرفر
-        print(f"Server Error fetching zones: {e}")
-        return jsonify([])
+        return jsonify({'error': 'Server Error fetching zones', 'details': str(e)}), 500
 
-# 5. صفحة المحاكاة
 @pilot.route('/simulate/<int:flight_id>')
 @login_required
 def simulate_flight(flight_id):
+    """View to simulate a user's approved flight."""
     flight = FlightRequest.query.get_or_404(flight_id)
     
     if flight.pilot != current_user:

@@ -1,46 +1,83 @@
+/* =========================================
+   1. Imports & Fonts
+   ========================================= */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto:wght@300;400;500&display=swap');
 
-/* 1. تعريف المتغيرات للوضع الليلي (الافتراضي) */
+/* =========================================
+   2. CSS Variables (Theming Engine)
+   ========================================= */
 :root {
+    /* ( Dark Mode) */
     --bg-color: #050505;
     --bg-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop');
     --glass-bg: rgba(10, 20, 30, 0.85);
+    --glass-border: rgba(0, 212, 255, 0.3);
+    
     --text-main: #ffffff;
-    --text-muted: #a0a0a0;
-    --border-color: rgba(0, 212, 255, 0.3);
+    --text-muted: #b0b0b0;
+    
     --neon-blue: #00d4ff;
     --neon-green: #00f0b5;
-    --card-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
-    --input-bg: rgba(0, 0, 0, 0.3);
+    --neon-red: #ff2a6d;
+    --neon-yellow: #ffc107;
+    
+    --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    --input-bg: rgba(0, 0, 0, 0.5);
+    --table-hover: rgba(0, 212, 255, 0.1);
 }
 
-/* 2. تعريف المتغيرات للوضع النهاري (Light Mode) */
 [data-theme="light"] {
+    /* (Light Mode) */
     --bg-color: #f0f2f5;
-    /* صورة خلفية فاتحة (غيوم أو سماء) */
     --bg-image: url('https://img.freepik.com/free-vector/white-abstract-background-design_23-2148825582.jpg'); 
-    --glass-bg: rgba(255, 255, 255, 0.85); /* زجاج أبيض */
-    --text-main: #1a1a1a;
-    --text-muted: #555555;
-    --border-color: rgba(0, 100, 200, 0.2);
-    --neon-blue: #0056b3; /* أزرق داكن للقراءة */
-    --neon-green: #008f6b;
-    --card-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-    --input-bg: rgba(255, 255, 255, 0.9);
+    --glass-bg: rgba(255, 255, 255, 0.9);
+    --glass-border: rgba(0, 0, 0, 0.1);
+    
+    --text-main: #212529;
+    --text-muted: #6c757d;
+    
+    --neon-blue: #0056b3;
+    --neon-green: #198754;
+    --neon-red: #dc3545;
+    --neon-yellow: #d63384; 
+    
+    --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --input-bg: rgba(255, 255, 255, 1);
+    --table-hover: rgba(0, 0, 0, 0.05);
 }
 
+/* =========================================
+   3. Base Styles
+   ========================================= */
 body {
     background-color: var(--bg-color);
     background-image: var(--bg-image);
     background-size: cover;
     background-attachment: fixed;
+    background-position: center;
     color: var(--text-main);
     font-family: 'Roboto', sans-serif;
-    height: 100vh;
-    transition: background 0.5s ease, color 0.5s ease; /* تنعيم التحويل */
+    min-height: 100vh;
+    transition: background 0.5s ease, color 0.5s ease;
 }
 
-/* باقي التصميم كما هو، لكن يستخدم المتغيرات */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-main);
+}
+
+a {
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+/* =========================================
+   4. Typography & Branding
+   ========================================= */
+.brand-font {
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 1px;
+}
+
 .nasaq-logo {
     font-family: 'Orbitron', sans-serif;
     font-size: 3.5rem;
@@ -48,44 +85,221 @@ body {
     color: var(--neon-blue);
     margin: 0;
     letter-spacing: 4px;
+    text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
 }
 
+.nasaq-slogan {
+    font-family: 'Roboto', sans-serif;
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.nasaq-brand-container {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+/* =========================================
+   5. Components (Glassmorphism)
+   ========================================= */
 .glass-card {
     background: var(--glass-bg);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--border-color);
-    border-radius: 15px;
-    padding: 30px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 25px;
     box-shadow: var(--card-shadow);
-    transition: all 0.5s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.form-control {
-    background: var(--input-bg) !important;
-    border: 1px solid var(--border-color) !important;
-    color: var(--text-main) !important;
+.role-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--neon-blue);
+    box-shadow: 0 10px 40px rgba(0, 212, 255, 0.2);
 }
 
-/* تعديل القائمة العلوية لتناسب الوضعين */
+/* Navbar */
 .navbar-nasaq {
     background: var(--glass-bg);
-    border-bottom: 1px solid var(--neon-blue);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--glass-border);
+    padding: 1rem 0;
 }
 
 .nav-link {
     color: var(--text-main) !important;
+    font-weight: 500;
+    position: relative;
 }
 
+.nav-link:hover {
+    color: var(--neon-blue) !important;
+}
+
+/* Buttons */
 .btn-nasaq {
     background: transparent;
     border: 2px solid var(--neon-blue);
     color: var(--neon-blue);
+    font-family: 'Orbitron', sans-serif;
     font-weight: bold;
-    padding: 10px 20px;
-    transition: 0.3s;
+    padding: 10px 25px;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .btn-nasaq:hover {
     background: var(--neon-blue);
-    color: #fff;
+    color: #fff; 
+    box-shadow: 0 0 15px var(--neon-blue);
+}
+
+.btn-outline-light {
+    border-color: var(--text-muted);
+    color: var(--text-muted);
+}
+
+.btn-outline-light:hover {
+    background: var(--text-muted);
+    color: var(--bg-color);
+}
+
+/* Forms */
+.form-control {
+    background-color: var(--input-bg) !important;
+    border: 1px solid var(--glass-border) !important;
+    color: var(--text-main) !important;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 0.25rem rgba(0, 212, 255, 0.25);
+    border-color: var(--neon-blue) !important;
+}
+
+.form-control::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+/* Tables */
+.table {
+    color: var(--text-main) !important;
+    border-color: var(--glass-border) !important;
+}
+
+.table thead th {
+    border-bottom: 2px solid var(--glass-border);
+    color: var(--neon-blue);
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--table-hover) !important;
+}
+
+/* Alerts */
+.alert {
+    border: none;
+    color: #fff; 
+}
+.alert-success { background-color: rgba(25, 135, 84, 0.9); }
+.alert-danger { background-color: rgba(220, 53, 69, 0.9); }
+.alert-warning { background-color: rgba(255, 193, 7, 0.9); color: #000; }
+.alert-info { background-color: rgba(13, 202, 240, 0.9); color: #000; }
+
+/* =========================================
+   6. Map & Simulation Elements
+   ========================================= */
+#map {
+    z-index: 1;
+    border-radius: 15px;
+}
+
+/* Drone Marker Styles */
+.drone-marker {
+    transition: all 0.2s ease;
+}
+
+.drone-svg {
+    filter: drop-shadow(0px 0px 8px var(--neon-blue));
+    animation: hoverDrone 2s infinite alternate ease-in-out;
+}
+
+/* Leaflet Popup Customization (Dark Mode Fix) */
+.leaflet-popup-content-wrapper, .leaflet-popup-tip {
+    background: var(--glass-bg);
+    color: var(--text-main);
+    backdrop-filter: blur(5px);
+    border: 1px solid var(--glass-border);
+}
+
+.leaflet-popup-content strong {
+    font-family: 'Orbitron', sans-serif;
+}
+
+/* =========================================
+   7. Animations
+   ========================================= */
+
+/* Fade In */
+.animate-fade-in {
+    animation: fadeIn 1s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
+.animate-pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.7); }
+    70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(0, 212, 255, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 212, 255, 0); }
+}
+
+
+.animate-blink {
+    animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
+}
+
+/* Drone Hover Effect */
+@keyframes hoverDrone {
+    from { transform: translateY(0); }
+    to { transform: translateY(-5px); }
+}
+
+/* =========================================
+   8. Responsive Adjustments
+   ========================================= */
+@media (max-width: 768px) {
+    .nasaq-logo {
+        font-size: 2.5rem;
+    }
+    
+    .glass-card {
+        padding: 15px;
+    }
+    
+    .role-card {
+        margin-bottom: 20px;
+    }
 }
